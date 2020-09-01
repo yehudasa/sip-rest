@@ -52,31 +52,30 @@ class SIPDataFull:
 
         entries = []
 
-        for aws_bucket in env_params.aws_buckets:
-            bucket = s3.Bucket(aws_bucket)
-            paginator = bucket.meta.client.get_paginator('list_objects')
-            for resp in paginator.paginate(Bucket=aws_bucket, Delimiter='/', Marker=marker):
-                for cp in resp.get('CommonPrefixes', []):
-                    prefix = cp['Prefix']
-                    b = prefix.rstrip('/')
-                    entry_info = {
-                            'key': b,
-                            'num_shards': env_params.bilog_num_shards,
-                            'shard_id': -1
-                            }
+        aws_bucket = env_params.aws_bucket
 
-                    entry = {
-                            'info': entry_info,
-                            'key': prefix
-                            }
+        prefix = self.env.instance + '/'
+        bucket = s3.Bucket(aws_bucket)
+        paginator = bucket.meta.client.get_paginator('list_objects')
+        for resp in paginator.paginate(Bucket=aws_bucket, Delimiter='/', Marker=marker, Prefix=prefix):
+            for cp in resp.get('CommonPrefixes', []):
+                prefix = cp['Prefix']
+                b = prefix.rstrip('/')
+                entry_info = {
+                        'key': b,
+                        'num_shards': env_params.bilog_num_shards,
+                        'shard_id': -1
+                        }
 
-                    entries.append(entry)
+                entry = {
+                        'info': entry_info,
+                        'key': prefix
+                        }
 
-                    if len(entries) == max_entries:
-                        break
+                entries.append(entry)
 
-            if len(entries) == max_entries:
-                break
+                if len(entries) == max_entries:
+                    break
 
         return (200, entries)
 

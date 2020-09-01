@@ -2,6 +2,8 @@ import json
 import boto3
 
 from sip_data import SIPDataFull, SIPDataInc
+from sip_bucket import SIPBucketFull
+
 from env import *
 
 
@@ -19,6 +21,9 @@ class SIPEnv:
 
         if provider == 'data.inc':
             return SIPDataInc(self)
+
+        if provider == 'bucket.full':
+            return SIPBucketFull(self, instance)
 
         return None
 
