@@ -95,7 +95,7 @@ class SIPDataInc:
                 "stages" : [
                     {
                         "disabled" : "false",
-                        "num_shards" : 128,
+                        "num_shards" : self.num_shards,
                         "sid" : "data.inc",
                         "type" : "inc"
                         }
