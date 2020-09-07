@@ -7,10 +7,19 @@ from env import *
 from tools import ceph_str_hash_linux
 
 
+def parse_instance(instance):
+    print('instance=%s' % instance)
+    bi = instance.split(':')
+    if len(bi) == 2:
+        return (bi[0], bi[1])
+    
+    return (instance, '')
+
+
 class SIPBucketFull:
     def __init__(self, env, instance):
         self.env = env
-        self.instance = instance
+        self.bucket, self.bucket_instance = parse_instance(instance)
         self.num_shards = env_params.bilog_num_shards
         self.stage_id='bucket.full'
 
@@ -59,10 +68,11 @@ class SIPBucketFull:
 
         aws_bucket = env_params.aws_bucket
 
-        prefix = self.instance + '/'
+        prefix = self.bucket + '/'
         bucket = s3.Bucket(aws_bucket)
         paginator = bucket.meta.client.get_paginator('list_objects')
         for resp in paginator.paginate(Bucket=aws_bucket, Marker=marker, Prefix=prefix):
+            print('resp=%s' % resp)
             for entry in resp.get('Contents', []):
                 k = entry['Key']
                 obj = k.lstrip(prefix)
@@ -70,13 +80,14 @@ class SIPBucketFull:
                 if not self.obj_in_shard(obj, shard_id):
                     continue
 
-                owner = entry['Owner']
+                owner = entry.get('Owner') or {}
+                
                 entry_info = {
                         'bilog_flags': 0,
                         'object': obj,
                         'instance': '', # FIXME
                         'op': 'write',
-                        'owner': owner['ID'],
+                        'owner': owner.get('ID'),
                         'state': 'complete',
                         'timestamp': entry['LastModified'].strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
                         'ver' : {
@@ -101,13 +112,22 @@ class SIPBucketFull:
                 if len(entries) == max_entries:
                     break
 
-        return (200, entries)
+        more = len(entries) == max_entries
+        done = not more
+        
+        result = {
+            'more': more,
+            'done': done,
+            'entries': entries
+        }
+
+        return (200, result)
 
 
 class SIPBucketInc:
     def __init__(self, env, instance):
         self.env = env
-        self.instance = instance
+        self.bucket, self.bucket_instance = parse_instance(instance)
         self.num_shards = env_params.bilog_num_shards
         self.stage_id='bucket.inc'
 
@@ -137,9 +157,9 @@ class SIPBucketInc:
         if (stage_id and (stage_id != self.stage_id)) or (shard_id >= self.num_shards):
             return (416, {})   # invalid range
 
-        bucket_shard_id = self.instance + '.' + str(shard_id)
+        bucket_shard_id = self.bucket + '.' + str(shard_id)
 
-        datalog_table = get_table()
+        datalog_table = self.get_table()
         response = datalog_table.query(KeyConditionExpression=Key('bucket_shard_id').eq(bucket_shard_id), ScanIndexForward=False, Limit=1)
 
         current = ''
@@ -174,7 +194,7 @@ class SIPBucketInc:
 
         bilog_table = self.get_table()
 
-        bucket_shard_id = self.instance + '.' + str(shard_id)
+        bucket_shard_id = self.bucket + '.' + str(shard_id)
 
         cond = Key('bucket_shard_id').eq(bucket_shard_id)
         if marker:
@@ -207,6 +227,15 @@ class SIPBucketInc:
 
             entries.append(entry)
 
-        return (200, entries)
+        more = len(entries) == max_entries
+        done = False
+        
+        result = {
+            'more': more,
+            'done': done,
+            'entries': entries
+        }
+
+        return (200, result)
 
 

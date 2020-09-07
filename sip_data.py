@@ -54,7 +54,7 @@ class SIPDataFull:
 
         aws_bucket = env_params.aws_bucket
 
-        prefix = self.env.instance + '/'
+        prefix = '' # self.env.instance + '/'
         bucket = s3.Bucket(aws_bucket)
         paginator = bucket.meta.client.get_paginator('list_objects')
         for resp in paginator.paginate(Bucket=aws_bucket, Delimiter='/', Marker=marker, Prefix=prefix):
@@ -76,8 +76,17 @@ class SIPDataFull:
 
                 if len(entries) == max_entries:
                     break
+        
+        more = len(entries) == max_entries
+        done = not more
+        
+        result = {
+            'more': more,
+            'done': done,
+            'entries': entries
+        }
 
-        return (200, entries)
+        return (200, result)
 
 
 class SIPDataInc:
@@ -112,7 +121,7 @@ class SIPDataInc:
         if (stage_id and (stage_id != self.stage_id)) or (shard_id >= self.num_shards):
             return (416, {})   # invalid range
 
-        datalog_table = get_table()
+        datalog_table = self.get_table()
         response = datalog_table.query( KeyConditionExpression=Key('shard_id').eq(shard_id), ScanIndexForward=False, Limit=1)
 
         current = ''
@@ -163,6 +172,17 @@ class SIPDataInc:
 
             entries.append(entry)
 
-        return (200, entries)
+        more = len(entries) == max_entries
+        done = False
+        
+        result = {
+            'more': more,
+            'done': done,
+            'entries': entries
+        }
+
+
+
+        return (200, result)
 
 

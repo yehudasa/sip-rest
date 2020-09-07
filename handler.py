@@ -101,7 +101,7 @@ class HttpGet:
 
         if opt_info is not None:
             op = SIPGetInfo(self.env, opt_provider)
-        if opt_status is not None:
+        elif opt_status is not None:
             op = SIPGetStatus(self.env, opt_provider)
         else:
             op = SIPFetch(self.env, opt_provider)
