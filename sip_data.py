@@ -2,6 +2,8 @@ import boto3
 
 from boto3.dynamodb.conditions import Key
 
+from datetime import datetime as dt
+
 
 from env import *
 
@@ -64,7 +66,8 @@ class SIPDataFull:
                 entry_info = {
                         'key': b,
                         'num_shards': env_params.bilog_num_shards,
-                        'shard_id': -1
+                        'shard_id': -1,
+                        'timestamp': dt.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
                         }
 
                 entry = {
@@ -163,6 +166,7 @@ class SIPDataInc:
                     'key': item['bucket'],
                     'num_shards': int(item['num_shards']),
                     'shard_id': int(item['bucket_shard_id']),
+                    'timestamp': item['timestamp']
                     }
 
             entry = {

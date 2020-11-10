@@ -83,19 +83,15 @@ class SIPBucketFull:
                 owner = entry.get('Owner') or {}
                 
                 entry_info = {
-                        'bilog_flags': 0,
                         'object': obj,
                         'instance': '', # FIXME
-                        'op': 'write',
-                        'owner': owner.get('ID'),
-                        'state': 'complete',
                         'timestamp': entry['LastModified'].strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
-                        'ver' : {
-                            'epoch': 0,
-                            'pool': -1,
-                            },
-                        'versioned': False,
-                        'zones_trace': [],
+                        'versioned_epoch' : 0,
+                        'op': 'create_obj',
+                        'owner': owner.get('ID'),
+                        'complete': 'true',
+                        'instancec_tag': '',
+                        'sync_trace': [],
                         }
 
                 display_name = owner.get('DisplayName')
@@ -180,9 +176,11 @@ class SIPBucketInc:
 
     def convert_op(self, op):
         if op == 'ObjectRemoved:Delete':
-            return 'del'
+            return 'delete_obj'
+        if op == 'ObjectRemoved:DeleteMarkerCreated':
+            return 'create_dm'
 
-        return 'write'
+        return 'create_obj'
 
     def fetch(self, stage_id, shard_id, marker, max_entries):
         if (stage_id and (stage_id != self.stage_id)) or (shard_id >= self.num_shards):
@@ -205,19 +203,15 @@ class SIPBucketInc:
 
         for item in response['Items']:
             entry_info = {
-                    'bilog_flags': 0,
                     'object': item['obj'],
                     'instance': '', # FIXME
-                    'state': 'complete',
+                    'timestamp': item['timestamp'],
                     'op': self.convert_op(item['op']),
                     # 'owner': owner['ID'],
-                    'timestamp': item['timestamp'],
-                    'ver' : {
-                        'epoch': 0,
-                        'pool': -1,
-                        },
-                    'versioned': False,
-                    'zones_trace': [],
+                    'versioned_epoch' : 0,
+                    'complete': 'true',
+                    'instance_tag': '',
+                    'sync_trace': [],
                     }
 
             entry = {
